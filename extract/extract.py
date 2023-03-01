@@ -1,24 +1,18 @@
-import time
-
-from GenshinImpactComments import GenshinImpactComments
-from FileHandler import FileHandler
-
-
 def main():
-
-    curr_epoch_time = int(time.time())
-
-    subreddit_comments = GenshinImpactComments()
-    subreddit_comments.get_comments()
-    subreddit_comments.clean()
-
-    file_handler = FileHandler(
-            time=curr_epoch_time,
-            output_folder="out",
-            log_folder="log"
-        )
-    file_handler.write_output_to_csv(subreddit_comments.get_comments())
-    file_handler.write_to_log()
+    # Send email: extraction starting
+    try:  # Acquiring, Cleaning, and Storing Data
+        # Get Status (from Database? S3?)
+        # Get Data
+        # Build DataFrame
+        # Clean DataFrame
+        # Write DataFrame to S3
+        pass
+    except:  # Handle Failure
+        # Send email: extraction failed, why failed
+        pass
+    else:  # Handle Success
+        # Send email: extraction succesful, num of data parsed
+        pass
 
 
 if __name__ == "__main__":
