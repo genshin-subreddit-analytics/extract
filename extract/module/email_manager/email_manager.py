@@ -2,9 +2,9 @@ import logging
 import boto3
 import os
 # from botocore.exceptions import AlreadyExistsException
-from ses_identities import SesIdentity
-from ses_templates import SesTemplate
-from ses_mail_sender import SesMailSender, SesDestination
+from .ses_identities import SesIdentity
+from .ses_templates import SesTemplate
+from .ses_mail_sender import SesMailSender, SesDestination
 
 
 logger = logging.getLogger(__name__)
