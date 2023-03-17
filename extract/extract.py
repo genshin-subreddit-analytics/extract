@@ -1,14 +1,15 @@
+import traceback
 from datetime import datetime
 
 from module.email_manager import EmailManager
 
 
 def main():
+    email_manager = EmailManager()
     try:  # Acquiring, Cleaning, and Storing Data
         # Get Status (from Database? S3?)
         end_time = datetime.now()
         # Send email: extraction starting
-        email_manager = EmailManager()
         email_manager.send(
             "GSA-Start",
             {
@@ -21,9 +22,19 @@ def main():
         # Build DataFrame
         # Clean DataFrame
         # Write DataFrame to S3
-    except:  # Handle Failure
+    except Exception as e:  # Handle Failure
         # Send email: extraction failed, why failed
-        pass
+        stacktrace = traceback.format_exc()
+        email_manager.send(
+            "GSA-Error",
+            {
+                "subreddit": "niloumains",
+                "start_time": "June 26th, 2003",
+                "end_time": end_time.strftime("%c"),
+                "error_trace": stacktrace
+            }
+        )
+        print(stacktrace)
     else:  # Handle Success
         # Send email: extraction succesful, num of data parsed
         email_manager.send(

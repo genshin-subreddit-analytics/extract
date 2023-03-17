@@ -24,49 +24,52 @@ class EmailManager:
         self.ses_template = SesTemplate(self.ses_client)
         # <-- absolute dir the script is in
         self.script_dir = os.path.dirname(__file__)
+        self.email_templates = {
+            "GSA-Start": (
+                "Extraction Starting - Genshin Subreddit Analytics",
+                "Start scraping r/{{subreddit}}",
+                self.open_file("templates/start.html")
+            ),
+            "GSA-Error": (
+                "Extraction Error - Genshin Subreddit Analytics",
+                "Error scraping r/{{subreddit}}",
+                self.open_file("templates/error.html")
+            ),
+            "GSA-Complete": (
+                "Extraction Completed - Genshin Subreddit Analytics",
+                "Completed scraping r/{{subreddit}}",
+                self.open_file("templates/complete.html")
+            )
+        }
 
-    def __create_template_start(self):
-        rel_path = "templates/start.html"
+    def open_file(self, rel_path):
         abs_file_path = os.path.join(self.script_dir, rel_path)
+        return open(abs_file_path, "r").read()
+
+    def create_template(self, template_name):
         self.ses_template.create_template(
-            "GSA-Start",
-            "Extraction Starting - Genshin Subreddit Analytics",
-            "Start scraping r/{{subreddit}}",
-            open(abs_file_path, "r").read()
+            template_name,
+            *self.email_templates[template_name]
         )
 
-    def __create_template_complete(self):
-        rel_path = "templates/complete.html"
-        abs_file_path = os.path.join(self.script_dir, rel_path)
-        self.ses_template.create_template(
-            "GSA-Complete",
-            "Extraction Completed - Genshin Subreddit Analytics",
-            "Completed scraping r/{{subreddit}}",
-            open(abs_file_path, "r").read()
-        )
-
-    def __create_template_error(self):
-        rel_path = "templates/error.html"
-        abs_file_path = os.path.join(self.script_dir, rel_path)
-        self.ses_template.create_template(
-            "GSA-Error",
-            "Extraction Error - Genshin Subreddit Analytics",
-            "Error scraping r/{{subreddit}}",
-            open(abs_file_path, "r").read()
+    def update_template(self, template_name):
+        self.ses_template.update_template(
+            template_name,
+            *self.email_templates[template_name]
         )
 
     def send(self,
              template_name: str,
              template_data: dict):
+
         template_list = [template["Name"]
                          for template in self.ses_template.list_templates()]
+
         if template_name not in template_list:
-            if template_name == "GSA-Start":
-                self.__create_template_start()
-            elif template_name == "GSA-Complete":
-                self.__create_template_complete()
-            elif template_name == "GSA-Error":
-                self.__create_template_error()
+            self.create_template(template_name)
+        else:
+            self.update_template(template_name)
+
         self.ses_template.get_template(template_name)
         self.__send(
             template_name,
