@@ -203,24 +203,6 @@ def usage_demo():
                 email, SesDestination([email]), ses_template.name(), template_data)
             input("Mail sent. Check your inbox and press Enter to continue.")
 
-#         print("Sending mail through the Amazon SES SMTP server.")
-#         boto3_session = boto3.Session()
-#         region = boto3_session.region_name
-#         credentials = boto3_session.get_credentials()
-#         port = 587
-#         smtp_server = f'email-smtp.{region}.amazonaws.com'
-#         password = calculate_key(credentials.secret_key, region)
-#         message = """
-# Subject: Hi there
-#
-# This message is sent from the Amazon SES SMTP mail demo."""
-#         context = ssl.create_default_context()
-#         with smtplib.SMTP(smtp_server, port) as server:
-#             server.starttls(context=context)
-#             server.login(credentials.access_key, password)
-#             server.sendmail(email, email, message)
-#         print("Mail sent. Check your inbox!")
-
     if ses_template.template is not None:
         print("Deleting demo template.")
         ses_template.delete_template()

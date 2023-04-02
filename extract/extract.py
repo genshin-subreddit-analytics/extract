@@ -1,19 +1,22 @@
 import traceback
-import os
 import time
 
-from module.email_helper import EmailHelper
-from module.database_helper import DatabaseHelper
-from module.snscrape_helper import SnscrapeHelper
+from helpers import EmailHelper, DatabaseHelper, SnscrapeHelper, EnvironmentHelper, StorageHelper
 
 
 def main():
     # Get Status (from Database? S3?)
-    subreddit = os.environ["SUBREDDIT_NAME"]
-    client_tz = os.environ["CLIENT_TZ"]
+    subreddit = EnvironmentHelper.SUBREDDIT_NAME
+    client_tz = EnvironmentHelper.CLIENT_TZ
     # Get AWS Helpers
     email_helper = EmailHelper()
-    database_helper = DatabaseHelper(subreddit)
+    database_helper = DatabaseHelper(
+            subreddit,
+            EnvironmentHelper.DB_TABLE_NAME,
+            EnvironmentHelper.DB_TABLE_PRIMARY_KEY,
+            EnvironmentHelper.DB_LAST_ARCHIVED_ATTR_NAME
+        )
+    storage_helper = StorageHelper(EnvironmentHelper.BUCKET_NAME)
     # Get Time
     start_time = database_helper.get_last_archived_time()
     end_time = int(time.time())
@@ -31,8 +34,8 @@ def main():
         )
         # Get Data
         comment_df = snscrape_helper.get_comments().clean().get_df()
-        print(comment_df)
         # Write DataFrame to S3
+        storage_helper.upload_dataframe(comment_df, f"{subreddit}-{end_time}")
     except Exception as e:  # Handle Failure
         # Send email: extraction failed, why failed
         stacktrace = traceback.format_exc()
