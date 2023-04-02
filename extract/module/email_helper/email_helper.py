@@ -10,7 +10,7 @@ from .ses_mail_sender import SesMailSender, SesDestination
 logger = logging.getLogger(__name__)
 
 
-class EmailManager:
+class EmailHelper:
     """
     Sends email to recipient using Amazon SES
     """
@@ -98,7 +98,7 @@ class EmailManager:
 
 
 if __name__ == "__main__":
-    EM = EmailManager()
+    EM = EmailHelper()
     EM.send("GSA-Start", {"subreddit": "niloumains",
             "start_time": "June 26th, 2003", "end_time": "March 13th, 2023"})
     EM.send("GSA-Complete", {"subreddit": "niloumains",

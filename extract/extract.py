@@ -2,56 +2,58 @@ import traceback
 import os
 import time
 
-from module.email_manager import EmailManager
-from module.data_manager import DataManager
+from module.email_helper import EmailHelper
+from module.database_helper import DatabaseHelper
+from module.snscrape_helper import SnscrapeHelper
 
 
 def main():
     # Get Status (from Database? S3?)
     subreddit = os.environ["SUBREDDIT_NAME"]
     client_tz = os.environ["CLIENT_TZ"]
-    # Get AWS Clients
-    email_manager = EmailManager()
-    data_manager = DataManager(subreddit)
+    # Get AWS Helpers
+    email_helper = EmailHelper()
+    database_helper = DatabaseHelper(subreddit)
     # Get Time
-    start_time = data_manager.get_last_archived_time()
+    start_time = database_helper.get_last_archived_time()
     end_time = int(time.time())
+    # Initialize snscrape helper
+    snscrape_helper = SnscrapeHelper(subreddit, start_time, end_time)
     try:  # Acquiring, Cleaning, and Storing Data
         # Send email template: extraction starting
-        email_manager.send(
+        email_helper.send(
             "GSA-Start",
             {
                 "subreddit": subreddit,
-                "start_time": DataManager.unix_epoch_to_tz(start_time, client_tz),
-                "end_time": DataManager.unix_epoch_to_tz(end_time, client_tz)
+                "start_time": SnscrapeHelper.unix_epoch_to_tz(start_time, client_tz),
+                "end_time": SnscrapeHelper.unix_epoch_to_tz(end_time, client_tz)
             }
         )
         # Get Data
-        data_manager.set_time(start_time, end_time)
-        df = data_manager.get_comments()
-        print(df)
+        comment_df = snscrape_helper.get_comments().clean().get_df()
+        print(comment_df)
         # Write DataFrame to S3
     except Exception as e:  # Handle Failure
         # Send email: extraction failed, why failed
         stacktrace = traceback.format_exc()
-        email_manager.send(
+        email_helper.send(
             "GSA-Error",
             {
                 "subreddit": subreddit,
-                "start_time": DataManager.unix_epoch_to_tz(start_time, client_tz),
-                "end_time": DataManager.unix_epoch_to_tz(end_time, client_tz),
+                "start_time": SnscrapeHelper.unix_epoch_to_tz(start_time, client_tz),
+                "end_time": SnscrapeHelper.unix_epoch_to_tz(end_time, client_tz),
                 "error_trace": stacktrace
             }
         )
         print(e)
     else:  # Handle Success
         # Send email: extraction succesful, num of data parsed
-        email_manager.send(
+        email_helper.send(
             "GSA-Complete",
             {
                 "subreddit": subreddit,
-                "start_time": DataManager.unix_epoch_to_tz(start_time, client_tz),
-                "end_time": DataManager.unix_epoch_to_tz(end_time, client_tz),
+                "start_time": SnscrapeHelper.unix_epoch_to_tz(start_time, client_tz),
+                "end_time": SnscrapeHelper.unix_epoch_to_tz(end_time, client_tz)
             }
         )
 

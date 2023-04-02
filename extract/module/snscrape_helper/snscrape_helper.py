@@ -1,19 +1,21 @@
+import pytz
+import datetime
 import pandas as pd
 from snscrape.modules.reddit import RedditSubredditScraper
 
-class DataExtractor:
+class SnscrapeHelper:
     """
     Get Subreddit Data
     """
 
-    def __init__(self, subreddit, last_epoch_time, curr_epoch_time):
+    def __init__(self, subreddit, after, before):
         self.genshin_comments_list = []
         self.scraper = RedditSubredditScraper(
                 subreddit,
                 submissions=False,
                 comments=True,
-                after=last_epoch_time,
-                before=curr_epoch_time
+                after=after,
+                before=before
             )
 
     def get_comments(self):
@@ -42,6 +44,7 @@ class DataExtractor:
                     "Parent ID"
                     ]
             )
+        return self
 
     def clean(self):
         deleted_comments = self.genshin_comments["Body"] == "[deleted]"
@@ -68,5 +71,13 @@ class DataExtractor:
                 ~spam_comments.reindex(self.genshin_comments.index)
             ]
 
+        return self
+
     def get_df(self):
         return self.genshin_comments
+
+    @classmethod
+    def unix_epoch_to_tz(cls, unix_timestamp, timezone):
+        dt_utc = datetime.datetime.utcfromtimestamp(unix_timestamp)
+        tz = pytz.timezone(timezone)
+        return dt_utc.replace(tzinfo=pytz.utc).astimezone(tz).strftime('%Y-%m-%d %H:%M:%S %Z')
