@@ -36,6 +36,8 @@ def main():
         comment_df = snscrape_helper.get_comments().clean().get_df()
         # Write DataFrame to S3
         storage_helper.upload_dataframe(comment_df, f"{subreddit}-{end_time}")
+        # Update Last Archived Time
+        database_helper.set_last_archived_time(end_time)
     except Exception as e:  # Handle Failure
         # Send email: extraction failed, why failed
         stacktrace = traceback.format_exc()

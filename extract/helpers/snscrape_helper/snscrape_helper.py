@@ -22,8 +22,6 @@ class SnscrapeHelper:
         for idx, comment in enumerate(self.scraper.get_items()):
             if idx % 100 == 0:
                 print(f"Gathered {idx} comments")
-            if idx >= 100:
-                break
             self.genshin_comments_list.append([
                 comment.id,
                 comment.date,
