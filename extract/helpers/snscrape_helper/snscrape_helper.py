@@ -1,7 +1,10 @@
 import pytz
 import datetime
+import logging
 import pandas as pd
 from snscrape.modules.reddit import RedditSubredditScraper
+
+logger = logging.getLogger(__name__)
 
 class SnscrapeHelper:
     """
@@ -15,67 +18,64 @@ class SnscrapeHelper:
                 submissions=False,
                 comments=True,
                 after=after,
-                before=before
+                before=before,
+                retries=17
             )
 
-    def get_comments(self):
-        for idx, comment in enumerate(self.scraper.get_items()):
-            if idx % 100 == 0:
-                print(f"Gathered {idx} comments")
-            self.genshin_comments_list.append([
-                comment.id,
-                comment.date,
-                comment.author,
-                comment.url,
-                comment.body,
-                comment.parentId
-            ])
+    def get_comments(self, batch_size = 100000):
+        data = []
+        for comment in self.scraper.get_items():
+            data.append({
+                "ID": comment.id,
+                "Date": comment.date,
+                "Author": comment.author,
+                "URL": comment.url,
+                "Body": comment.body,
+                "Parent ID": comment.parentId
+            })
+            if len(data) >= batch_size:
+                logger.info(f"Yielding {batch_size} comments")
+                df = pd.DataFrame(data).astype({
+                    "ID": "object",
+                    "Date": "datetime64[ns, UTC]",
+                    "Author": "object",
+                    "URL": "object",
+                    "Body": "object",
+                    "Parent ID": "object"
+                })
+                yield df
+                data = []
+        if data:
+            df = pd.DataFrame(data).astype({
+                "ID": "object",
+                "Date": "datetime64[ns, UTC]",
+                "Author": "object",
+                "URL": "object",
+                "Body": "object",
+                "Parent ID": "object"
+            })
+            yield df
 
-        self.genshin_comments = pd.DataFrame(
-                self.genshin_comments_list,
-                columns=[
-                    "ID",
-                    "Date",
-                    "Author",
-                    "URL",
-                    "Body",
-                    "Parent ID"
-                    ]
-            )
-        return self
+    @staticmethod
+    def clean(comment_df):
+        excluded_comments = (
+            (comment_df["Body"] == "[deleted]") |
+            (comment_df["Body"] == "[removed]") |
+            (comment_df["Author"] == "AutoModerator")
+        )
 
-    def clean(self):
-        deleted_comments = self.genshin_comments["Body"] == "[deleted]"
-        removed_comments = self.genshin_comments["Body"] == "[removed]"
-        spam_comments = self.genshin_comments["Author"] == "AutoModerator"
+        cleaned_df = comment_df[~excluded_comments]
+        return cleaned_df
 
-        print(f"{sum(deleted_comments)} comment(s) deleted")
-        print(f"{sum(removed_comments)} comment(s) removed")
-        print(f"{sum(spam_comments)} comment(s) from AutoModerator")
+    @staticmethod
+    def convert_unix_to_timezone_time(unix_timestamp, timezone_name):
+        # Convert Unix timestamp to a Python datetime object
+        datetime_obj = datetime.datetime.fromtimestamp(unix_timestamp)
 
-        # print(f" \
-        #       {len(self.genshin_comments)}, \
-        #       {len(deleted_comments)}, \
-        #       {len(removed_comments)}, \
-        #       {len(spam_comments)}")
+        # Get the pytz timezone object
+        timezone = pytz.timezone(timezone_name)
 
-        self.genshin_comments = self.genshin_comments[
-                ~deleted_comments.reindex(self.genshin_comments.index)
-            ]
-        self.genshin_comments = self.genshin_comments[
-                ~removed_comments.reindex(self.genshin_comments.index)
-            ]
-        self.genshin_comments = self.genshin_comments[
-                ~spam_comments.reindex(self.genshin_comments.index)
-            ]
+        # Convert datetime object to the desired timezone
+        datetime_obj = timezone.localize(datetime_obj)
 
-        return self
-
-    def get_df(self):
-        return self.genshin_comments
-
-    @classmethod
-    def unix_epoch_to_tz(cls, unix_timestamp, timezone):
-        dt_utc = datetime.datetime.utcfromtimestamp(unix_timestamp)
-        tz = pytz.timezone(timezone)
-        return dt_utc.replace(tzinfo=pytz.utc).astimezone(tz).strftime('%Y-%m-%d %H:%M:%S %Z')
+        return datetime_obj.strftime('%Y-%m-%d %H:%M:%S %Z')

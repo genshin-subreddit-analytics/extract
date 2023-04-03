@@ -22,43 +22,51 @@ def main():
     end_time = int(time.time())
     # Initialize snscrape helper
     snscrape_helper = SnscrapeHelper(subreddit, start_time, end_time)
+    storage_helper.set_name(f"{subreddit}-{end_time}")
     try:  # Acquiring, Cleaning, and Storing Data
         # Send email template: extraction starting
         email_helper.send(
             "GSA-Start",
             {
                 "subreddit": subreddit,
-                "start_time": SnscrapeHelper.unix_epoch_to_tz(start_time, client_tz),
-                "end_time": SnscrapeHelper.unix_epoch_to_tz(end_time, client_tz)
+                "start_time": SnscrapeHelper.convert_unix_to_timezone_time(start_time, client_tz),
+                "end_time": SnscrapeHelper.convert_unix_to_timezone_time(end_time, client_tz),
             }
         )
-        # Get Data
-        comment_df = snscrape_helper.get_comments().clean().get_df()
-        # Write DataFrame to S3
-        storage_helper.upload_dataframe(comment_df, f"{subreddit}-{end_time}")
+
+        # Save Pandas Dataframe into Disk per Batch Size
+        storage_helper.save_to_disk(
+            # Comment Generator
+            snscrape_helper.get_comments,
+            # Batch Size
+            100000,
+            # Dataframe Cleaner
+            SnscrapeHelper.clean
+        )
+        # Upload previously saved Dataframe (csv) into Cloud
+        storage_helper.upload_to_cloud()
         # Update Last Archived Time
         database_helper.set_last_archived_time(end_time)
-    except Exception as e:  # Handle Failure
+    except Exception as _:  # Handle Failure
         # Send email: extraction failed, why failed
         stacktrace = traceback.format_exc()
         email_helper.send(
             "GSA-Error",
             {
                 "subreddit": subreddit,
-                "start_time": SnscrapeHelper.unix_epoch_to_tz(start_time, client_tz),
-                "end_time": SnscrapeHelper.unix_epoch_to_tz(end_time, client_tz),
+                "start_time": SnscrapeHelper.convert_unix_to_timezone_time(start_time, client_tz),
+                "end_time": SnscrapeHelper.convert_unix_to_timezone_time(end_time, client_tz),
                 "error_trace": stacktrace
             }
         )
-        print(e)
     else:  # Handle Success
         # Send email: extraction succesful, num of data parsed
         email_helper.send(
             "GSA-Complete",
             {
                 "subreddit": subreddit,
-                "start_time": SnscrapeHelper.unix_epoch_to_tz(start_time, client_tz),
-                "end_time": SnscrapeHelper.unix_epoch_to_tz(end_time, client_tz)
+                "start_time": SnscrapeHelper.convert_unix_to_timezone_time(start_time, client_tz),
+                "end_time": SnscrapeHelper.convert_unix_to_timezone_time(end_time, client_tz),
             }
         )
 
