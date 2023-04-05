@@ -22,7 +22,6 @@ def main():
     end_time = int(time.time())
     # Initialize snscrape helper
     snscrape_helper = SnscrapeHelper(subreddit, start_time, end_time)
-    storage_helper.set_name(f"{subreddit}-{end_time}")
     try:  # Acquiring, Cleaning, and Storing Data
         # Send email template: extraction starting
         email_helper.send(
@@ -33,18 +32,21 @@ def main():
                 "end_time": SnscrapeHelper.convert_unix_to_timezone_time(end_time, client_tz),
             }
         )
+        
+        batch_curr_time = end_time
+        for comment_df in snscrape_helper.get_comments(batch_size=500_000):
+            batch_last_time = SnscrapeHelper.convert_isoformat_to_unix_timestamp(
+                str(comment_df["Date"].iloc[-1])
+            )
+            file_name = f"{subreddit}---{batch_last_time}-{batch_curr_time}.parquet"
+            StorageHelper.save_to_disk_parquet(
+                comment_df, 
+                file_name
+            )
+            storage_helper.upload_to_cloud(file_name)
 
-        # Save Pandas Dataframe into Disk per Batch Size
-        storage_helper.save_to_disk(
-            # Comment Generator
-            snscrape_helper.get_comments,
-            # Batch Size
-            100000,
-            # Dataframe Cleaner
-            SnscrapeHelper.clean
-        )
-        # Upload previously saved Dataframe (csv) into Cloud
-        storage_helper.upload_to_cloud()
+            batch_curr_time = batch_last_time
+
         # Update Last Archived Time
         database_helper.set_last_archived_time(end_time)
     except Exception as _:  # Handle Failure

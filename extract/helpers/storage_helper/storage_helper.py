@@ -12,11 +12,11 @@ class StorageHelper:
     def set_name(self, name):
         self.save_file_name = name
 
-    def upload_to_cloud(self):
+    def upload_to_cloud(self, file_name):
         self.bucket.upload_file(
-            self.save_file_name, 
+            file_name,
             self.bucket_name, 
-            self.save_file_name
+            file_name
         )
 
     def save_to_disk(self, comment_generator, batch_size, comment_cleaner):
@@ -33,3 +33,9 @@ class StorageHelper:
 
                 # Free memory by deleting the chunk
                 del df_chunk
+
+    @staticmethod
+    def save_to_disk_parquet(df, file_name):
+        df.to_parquet(
+            path=file_name
+        )

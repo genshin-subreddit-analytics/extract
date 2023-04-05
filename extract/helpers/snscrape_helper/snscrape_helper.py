@@ -24,7 +24,7 @@ class SnscrapeHelper:
 
     def get_comments(self, batch_size = 100000):
         data = []
-        for comment in self.scraper.get_items():
+        for idx, comment in enumerate(self.scraper.get_items()):
             data.append({
                 "ID": comment.id,
                 "Date": comment.date,
@@ -33,8 +33,8 @@ class SnscrapeHelper:
                 "Body": comment.body,
                 "Parent ID": comment.parentId
             })
-            if len(data) >= batch_size:
-                logger.info(f"Yielding {batch_size} comments")
+            if idx % batch_size == 0:
+                logger.info(f"COMMENT COUNTER #{idx}")
                 df = pd.DataFrame(data).astype({
                     "ID": "object",
                     "Date": "datetime64[ns, UTC]",
@@ -79,3 +79,9 @@ class SnscrapeHelper:
         datetime_obj = timezone.localize(datetime_obj)
 
         return datetime_obj.strftime('%Y-%m-%d %H:%M:%S %Z')
+
+    @staticmethod
+    def convert_isoformat_to_unix_timestamp(date_string):
+        date_obj = datetime.datetime.fromisoformat(date_string)
+        unix_timestamp = int(date_obj.timestamp())
+        return unix_timestamp
