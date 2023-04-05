@@ -17,7 +17,7 @@ class EmailHelper:
 
     def __init__(self,
                  sender: str = "ses.genshinsubredditanalytics@gmail.com",
-                 reciever: str = "malifputrayasa@gmail.com"):
+                 reciever: str = "malifputrayasa@gmail.com") -> None:
         self.ses_client = boto3.client('ses')
         self.sender_addr = sender
         self.recver_addr = reciever
@@ -42,17 +42,17 @@ class EmailHelper:
             )
         }
 
-    def open_file(self, rel_path):
+    def open_file(self, rel_path) -> str:
         abs_file_path = os.path.join(self.script_dir, rel_path)
         return open(abs_file_path, "r").read()
 
-    def create_template(self, template_name):
+    def create_template(self, template_name) -> None:
         self.ses_template.create_template(
             template_name,
             *self.email_templates[template_name]
         )
 
-    def update_template(self, template_name):
+    def update_template(self, template_name) -> None:
         self.ses_template.update_template(
             template_name,
             *self.email_templates[template_name]
@@ -60,7 +60,7 @@ class EmailHelper:
 
     def send(self,
              template_name: str,
-             template_data: dict):
+             template_data: dict) -> None:
 
         template_list = [template["Name"]
                          for template in self.ses_template.list_templates()]
@@ -78,7 +78,7 @@ class EmailHelper:
 
     def __send(self,
                template_name: str,
-               template_data: dict):
+               template_data: dict) -> None:
         # Send msg to recipient
         logging.basicConfig(level=logging.INFO,
                             format='%(levelname)s: %(message)s')

@@ -7,11 +7,11 @@ class DatabaseHelper:
 
     def __init__(
             self, 
-            subreddit_name,
-            table_name,
-            pk_name,
-            last_archived_attr_name
-        ):
+            subreddit_name: str,
+            table_name: str,
+            pk_name: str,
+            last_archived_attr_name: str
+        ) -> None:
         self.subreddit = subreddit_name
         self.dynamodb = boto3.resource('dynamodb')
         self.table_name = table_name
@@ -27,12 +27,12 @@ class DatabaseHelper:
         )
 
         if 'Item' in response:
-            last_time = response['Item'][self.db_last_archived_attr_name]
+            last_time = str(response['Item'][self.db_last_archived_attr_name])
             return int(last_time)
         else:
             return 0
 
-    def set_last_archived_time(self, time_ : int):
+    def set_last_archived_time(self, time_ : int) -> None:
         self.db_table.update_item(
             Key={
                 self.db_pk_name: self.subreddit

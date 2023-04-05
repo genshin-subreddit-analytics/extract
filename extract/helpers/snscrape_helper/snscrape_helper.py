@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 import pytz
 import datetime
 import logging
@@ -11,7 +12,7 @@ class SnscrapeHelper:
     Get Subreddit Data
     """
 
-    def __init__(self, subreddit, after, before):
+    def __init__(self, subreddit: str, after: int, before: int) -> None:
         self.genshin_comments_list = []
         self.scraper = RedditSubredditScraper(
                 subreddit,
@@ -22,7 +23,7 @@ class SnscrapeHelper:
                 retries=17
             )
 
-    def get_comments(self, batch_size = 100000):
+    def get_comments(self, batch_size: int = 100000) -> Iterator[pd.DataFrame]:
         data = []
         for idx, comment in enumerate(self.scraper.get_items()):
             data.append({
@@ -33,8 +34,8 @@ class SnscrapeHelper:
                 "Body": comment.body,
                 "Parent ID": comment.parentId
             })
-            if idx % batch_size == 0:
-                logger.info(f"COMMENT COUNTER #{idx}")
+            if (idx + 1) % batch_size == 0:
+                logger.info(f"Comment Counter #{idx + 1}")
                 df = pd.DataFrame(data).astype({
                     "ID": "object",
                     "Date": "datetime64[ns, UTC]",
@@ -57,7 +58,7 @@ class SnscrapeHelper:
             yield df
 
     @staticmethod
-    def clean(comment_df):
+    def clean(comment_df: pd.DataFrame) -> None:
         excluded_comments = (
             (comment_df["Body"] == "[deleted]") |
             (comment_df["Body"] == "[removed]") |
@@ -68,7 +69,7 @@ class SnscrapeHelper:
         return cleaned_df
 
     @staticmethod
-    def convert_unix_to_timezone_time(unix_timestamp, timezone_name):
+    def convert_unix_to_timezone_time(unix_timestamp: int, timezone_name: str) -> str:
         # Convert Unix timestamp to a Python datetime object
         datetime_obj = datetime.datetime.fromtimestamp(unix_timestamp)
 
@@ -81,7 +82,7 @@ class SnscrapeHelper:
         return datetime_obj.strftime('%Y-%m-%d %H:%M:%S %Z')
 
     @staticmethod
-    def convert_isoformat_to_unix_timestamp(date_string):
+    def convert_isoformat_to_unix_timestamp(date_string: str) -> int:
         date_obj = datetime.datetime.fromisoformat(date_string)
         unix_timestamp = int(date_obj.timestamp())
         return unix_timestamp
